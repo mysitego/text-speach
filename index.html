@@ -209,18 +209,33 @@
             }
         }
 
-        function setWhatsAppLink() {
-            const country = navigator.language.split('-')[1];
-            const whatsappLink = document.getElementById('whatsapp-link');
-            if (country === 'JO') {
-                whatsappLink.href = 'https://wa.me/+967774813824';
-            } 
-            else if (country === 'SA') {
-                whatsappLink.href = 'https://wa.me/+966565117544';
+        async function getLocationInfo() {
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('حدث خطأ في الحصول على معلومات الموقع:', error);
+                return null;
             }
         }
 
-        window.onload = setWhatsAppLink;
+        function setWhatsAppLink(countryCode) {
+            const whatsappLink = document.getElementById('whatsapp-link');
+            if (countryCode === 'YE') {
+                whatsappLink.href = 'https://wa.me/+967777845894';
+            } else if (countryCode === 'SA') {
+                whatsappLink.href = 'https://wa.me/+966565457884';
+            } else {
+                whatsappLink.href = 'https://wa.me/+966565117544'; // Default link
+            }
+        }
+
+        getLocationInfo().then(data => {
+            if (data && data.country_code) {
+                setWhatsAppLink(data.country_code);
+            }
+        });
     </script>
 </body>
 </html>
