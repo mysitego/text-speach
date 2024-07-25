@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech Converter</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        body.dark {
+            background-color: #1a202c;
+            color: #a0aec0;
+        }
+        .dark .bg-white {
+            background-color: #2d3748;
+            color: #a0aec0;
+        }
+        .dark .border-gray-300 {
+            border-color: #4a5568;
+        }
+        .dark .bg-blue-500 {
+            background-color: #2a4365; /* Darker blue */
+        }
+        .dark .bg-green-500 {
+            background-color: #2f855a; /* Darker green */
+        }
+        .dark .bg-yellow-500 {
+            background-color: #b7791f; /* Darker yellow */
+        }
+        .dark .bg-red-500 {
+            background-color: #c53030; /* Darker red */
+        }
+        .dark .text-white {
+            color: #ffffff; /* White text */
+        }
+        .dark .text-red-500 {
+            color: #fc8181;
+        }
+        .theme-icon {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+        <div class="flex justify-between items-center mb-4 flex-col">
+            <div class="flex justify-between space-x-4 w-full">
+                <button onclick="toggleTheme()" title="Toggle Theme" class="p-4">
+                    <img id="theme-icon" src="https://img.icons8.com/ios-filled/50/000000/sun.png" class="theme-icon">
+                </button>
+                <button onclick="toggleLanguage()" title="Toggle Language" class="p-4">
+                    <img id="language-icon" src="https://img.icons8.com/ios-filled/50/000000/language.png" class="theme-icon">
+                </button>
+            </div>
+            <img src="images/speach.png" width="50%" alt="">
+            <h1 class="text-2xl font-bold" id="title">Text to Speech Converter</h1>
+        </div>
+        <textarea id="text" rows="5" class="w-full p-2 border border-gray-300 rounded mb-4" placeholder="Enter text here"></textarea>
+        <select id="language" class="w-full p-2 border border-gray-300 rounded mb-4" onchange="checkLanguage()">
+            <option value="en-US">English</option>
+            <option value="ar-SA">العربية</option>
+        </select>
+        <p id="alert" class="text-red-500 mb-4 hidden text-sm">Please make sure to use diacritics for better pronunciation in Arabic.</p>
+        <button onclick="convertTextToSpeech()" class="w-full bg-blue-500 text-white p-2 rounded mb-2" id="convert-btn">Convert to Speech</button>
+        <!-- <audio id="audio" controls class="w-full mb-2"></audio> -->
+        <div class="flex space-x-2">
+            <button onclick="downloadSpeech('mp3')" class="flex-1 bg-green-500 text-white p-2 rounded" id="mp3-btn">Download as MP3</button>
+            <button onclick="downloadSpeech('wav')" class="flex-1 bg-yellow-500 text-white p-2 rounded" id="wav-btn">Download as WAV</button>
+            <button onclick="downloadSpeech('ogg')" class="flex-1 bg-red-500 text-white p-2 rounded" id="ogg-btn">Download as OGG</button>
+        </div>
+    </div>
+    <div class="mt-8 flex items-center">
+        <span class="mr-2" id="contact-text">Contact us on WhatsApp:</span>
+        <a id="whatsapp-link" href="https://wa.me/+966565117544" target="_blank">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" class="w-8 h-8 opacity-50">
+        </a>
+    </div>
+    <script>
+        let audioBlob;
+        let mediaRecorder;
+        let audioContext;
+        let chunks = [];
+        let currentLanguage = 'en';
+        
+        function checkLanguage() {
+            const language = document.getElementById('language').value;
+            const alert = document.getElementById('alert');
+            if (language === 'ar-SA') {
+                alert.textContent = ' لاخراج صوت بجود افضل وبدون اخطاء يجب تشكيل الحروف العربية ';
+                alert.classList.remove('hidden');
+            } else {
+                alert.textContent = 'Please make sure to use diacritics for better pronunciation in Arabic.';
+                alert.classList.add('hidden');
+            }
+        }
+
+        function convertTextToSpeech() {
+            const text = document.getElementById('text').value;
+            const language = document.getElementById('language').value;
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = language;
+
+            const synth = window.speechSynthesis;
+            synth.cancel(); // Stop any ongoing speech synthesis
+            synth.speak(utterance);
+
+            if (audioContext) {
+                audioContext.close();
+            }
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const destination = audioContext.createMediaStreamDestination();
+            mediaRecorder = new MediaRecorder(destination.stream);
+            chunks = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                chunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                const audioURL = URL.createObjectURL(audioBlob);
+                const audio = document.getElementById('audio');
+                audio.src = audioURL;
+                audio.play();
+            };
+
+            const source = audioContext.createMediaStreamSource(destination.stream);
+            source.connect(destination);
+
+            mediaRecorder.start();
+
+            utterance.onend = () => {
+                mediaRecorder.stop();
+            };
+        }
+
+        function downloadSpeech(format) {
+            if (audioBlob) {
+                let mimeType;
+                switch (format) {
+                    case 'mp3':
+                        mimeType = 'audio/mp3';
+                        break;
+                    case 'wav':
+                        mimeType = 'audio/wav';
+                        break;
+                    case 'ogg':
+                        mimeType = 'audio/ogg';
+                        break;
+                    default:
+                        mimeType = 'audio/webm';
+                }
+
+                const audioURL = URL.createObjectURL(audioBlob);
+                const link = document.createElement('a');
+                link.href = audioURL;
+                link.download = `speech.${format}`;
+                link.click();
+            } else {
+                alert('Please convert text to speech first.');
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            const themeIcon = document.getElementById('theme-icon');
+            if (document.body.classList.contains('dark')) {
+                themeIcon.src = 'https://img.icons8.com/ios-filled/50/ffffff/bright-moon.png';
+            } else {
+                themeIcon.src = 'https://img.icons8.com/ios-filled/50/000000/sun.png';
+            }
+        }
+
+        function toggleLanguage() {
+            const htmlTag = document.documentElement;
+            const languageIcon = document.getElementById('language-icon');
+            const textArea = document.getElementById('text');
+            const convertBtn = document.getElementById('convert-btn');
+            const mp3Btn = document.getElementById('mp3-btn');
+            const wavBtn = document.getElementById('wav-btn');
+            const oggBtn = document.getElementById('ogg-btn');
+            const title = document.getElementById('title');
+            const contactText = document.getElementById('contact-text');
+            if (currentLanguage === 'en') {
+                htmlTag.lang = 'ar';
+                htmlTag.dir = 'rtl';
+                textArea.placeholder = 'أدخل النص هنا';
+                convertBtn.textContent = 'تحويل النص إلى كلام';
+                mp3Btn.textContent = 'تحميل MP3';
+                wavBtn.textContent = 'تحميل WAV';
+                oggBtn.textContent = 'تحميل OGG';
+                title.textContent = 'محول النص إلى كلام';
+                contactText.textContent = 'تواصل معنا على واتساب:';
+                languageIcon.src = 'https://img.icons8.com/ios-filled/50/000000/language.png';
+                currentLanguage = 'ar';
+            } else {
+                htmlTag.lang = 'en';
+                htmlTag.dir = 'ltr';
+                textArea.placeholder = 'Enter text here';
+                convertBtn.textContent = 'Convert to Speech';
+                mp3Btn.textContent = 'Download as MP3';
+                wavBtn.textContent = 'Download as WAV';
+                oggBtn.textContent = 'Download as OGG';
+                title.textContent = 'Text to Speech Converter';
+                contactText.textContent = 'Contact us on WhatsApp:';
+                languageIcon.src = 'https://img.icons8.com/ios-filled/50/000000/language.png';
+                currentLanguage = 'en';
+            }
+        }
+
+        function setWhatsAppLink() {
+            const country = navigator.language.split('-')[1];
+            const whatsappLink = document.getElementById('whatsapp-link');
+            if (country === 'JO') {
+                whatsappLink.href = 'https://wa.me/+967774813824';
+            } else if (country === 'SA') {
+                whatsappLink.href = 'https://wa.me/+966565117544';
+            } else {
+                whatsappLink.href = 'https://wa.me/+966565117544';
+            }
+        }
+
+        window.onload = setWhatsAppLink;
+    </script>
+</body>
+</html>
